@@ -11,11 +11,11 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@dedis/cothority": "^3.4.4",
     "rxjs": "^6.5.4"
   },
   "devDependencies": {
     "@babel/core": "^7.7.7",
-    "@dedis/cothority": "3.4.4-p2002.1208.2011.0",
     "@babel/preset-env": "^7.7.7",
     "@types/dockerode": "^2.5.21",
     "@types/jasmine": "^3.5.0",

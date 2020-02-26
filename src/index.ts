@@ -91,7 +91,6 @@ export function sayHi() {
             pageDone++;
             if (pageDone == numPages) {
               printStat(startTime, pageDone * pageSize);
-              console.log("stop");
               notifier.next();
               notifier.complete();
             }
@@ -149,7 +148,6 @@ function load(e: Event) {
         pageDone++;
         if (pageDone == numPages) {
           printStat(startTime, pageDone * pageSize);
-          console.log("stop");
           notifier.next();
           notifier.complete();
         }
@@ -189,53 +187,56 @@ function printBlocks(
   if (ws === undefined) {
     var count = 0;
 
-    ws = conn.sendStream<PaginateResponse>(
+    conn.sendStream<PaginateResponse>(
       new PaginateRequest({
         startid: bid,
         pagesize: pageSize,
         numpages: numPages,
         backward: backward
       }),
-      PaginateResponse,
+      PaginateResponse).subscribe({
       // ws callback "onMessage":
-      (data, ws) => {
-        if (data.errorcode != 0) {
-          prependLog(
-            `got an error with code ${data.errorcode} : ${data.errortext}`
-          );
-          return;
-        }
-        var runCount = 0;
-        for (var i = 0; i < data.blocks.length; i++) {
-          runCount++;
-          if (data.backward) {
-            count--;
-          } else {
-            count++;
+        next: ([data, localws]) => {
+          if (data.errorcode != 0) {
+            prependLog(
+              `got an error with code ${data.errorcode} : ${data.errortext}`
+            );
+            return;
           }
-          if (count % logEach == 0) {
-            subject.next(runCount);
-            if (printDetails) {
-              prependLog(
-                longBlockString(data.blocks[i], count, data.pagenumber)
-              );
+          if( localws !== undefined) {
+            ws = localws
+          }
+          var runCount = 0;
+          for (var i = 0; i < data.blocks.length; i++) {
+            runCount++;
+            if (data.backward) {
+              count--;
             } else {
-              prependLog(
-                shortBlockString(data.blocks[i], count, data.pagenumber)
-              );
+              count++;
+            }
+            if (count % logEach == 0) {
+              subject.next(runCount);
+              if (printDetails) {
+                prependLog(
+                  longBlockString(data.blocks[i], count, data.pagenumber)
+                );
+              } else {
+                prependLog(
+                  shortBlockString(data.blocks[i], count, data.pagenumber)
+                );
+              }
             }
           }
+          lastBlock = data.blocks[data.blocks.length - 1];
+        },
+        complete: () => {
+          prependLog("closed");
+        },
+        error: (err: Error) => {
+          prependLog("error: ", err);
+          ws = undefined;
         }
-        lastBlock = data.blocks[data.blocks.length - 1];
-      },
-      (code, reason) => {
-        prependLog("closed: ", code, reason);
-      },
-      err => {
-        prependLog("error: ", err);
-        ws = undefined;
-      }
-    );
+      });
   } else {
     const message = new PaginateRequest({
       startid: bid,
