@@ -38,13 +38,14 @@ var numPagesInput: HTMLInputElement;
 var inputBlock: HTMLInputElement;
 var logEachInput: HTMLInputElement;
 var detailsInput: HTMLInputElement;
+var repeatCmdInput: HTMLInputElement;
 var statsTarget: HTMLElement;
 // To re-use the same ws connection across runs
 var ws: WebSocketAdapter;
 // The roster
 var roster: Roster;
 // Used from the ws callback to send events to the caller
-const subject = new Subject<number>();
+const subject = new Subject<[number, SkipBlock]>();
 // Those two need to be global so we can update them across multiple ws
 // callback
 var printDetails: boolean;
@@ -61,6 +62,7 @@ export function sayHi() {
   logEachInput = document.getElementById("log-each-input") as HTMLInputElement;
   statsTarget = document.getElementById("stats-info");
   detailsInput = document.getElementById("details-input") as HTMLInputElement;
+  repeatCmdInput = document.getElementById("repeat-cmd-input") as HTMLInputElement;
 
   roster = Roster.fromTOML(rosterStr);
   if (!roster) {
@@ -73,6 +75,7 @@ export function sayHi() {
       const firstBlockID = inputBlock.value;
       const pageSize = parseInt(numBlocksInput.value);
       const numPages = parseInt(numPagesInput.value);
+      const repeat = parseInt(repeatCmdInput.value)
       logEach = parseInt(logEachInput.value);
       printDetails = detailsInput.checked;
       statsTarget.innerText = "";
@@ -85,14 +88,22 @@ export function sayHi() {
       const notifier = new Subject();
       var startTime = performance.now();
       var pageDone = 0;
+      var repeatCounter = 0;
       subject.pipe(takeUntil(notifier)).subscribe({
-        next: (i: number) => {
+        next: ([i, skipBlock]) => {
           if (i == pageSize) {
             pageDone++;
             if (pageDone == numPages) {
               printStat(startTime, pageDone * pageSize);
-              notifier.next();
-              notifier.complete();
+              if (repeatCounter < repeat) {
+                repeatCounter++;
+                const next = skipBlock.forwardLinks[0].to.toString("hex");
+                pageDone = 0;
+                printBlocks(next, pageSize, numPages, false);
+              } else {
+                notifier.next();
+                notifier.complete();
+              }
             }
           }
         }
@@ -133,23 +144,37 @@ function load(e: Event) {
   }
   const pageSize = parseInt(numBlocksInput.value);
   const numPages = parseInt(numPagesInput.value);
+  const repeat = parseInt(repeatCmdInput.value)
   logEach = parseInt(logEachInput.value);
   printDetails = detailsInput.checked;
   const notifier = new Subject();
   var startTime = performance.now();
   var pageDone = 0;
+  var repeatCounter = 0
   subject.pipe(takeUntil(notifier)).subscribe({
     // As a reminder: if the observer sends an error or a "complete" message,
     // we cannot use the observer anymore. This is why the ws callback does not
     // send an observer error if one occurs, since we need to keep the same
     // observer during the entire session.
-    next: (i: number) => {
+    next: ([i, skipBlock]) => {
       if (i == pageSize) {
         pageDone++;
         if (pageDone == numPages) {
           printStat(startTime, pageDone * pageSize);
-          notifier.next();
-          notifier.complete();
+          if (repeatCounter < repeat) {
+            repeatCounter++
+            var next: string;
+            if (reversed) { 
+              next = skipBlock.backlinks[0].toString("hex");
+            } else {
+              next = skipBlock.forwardLinks[0].to.toString("hex");
+            }
+            pageDone = 0;
+            printBlocks(next, pageSize, numPages, reversed);
+          } else {
+            notifier.next();
+            notifier.complete();
+          }
         }
       }
     }
@@ -215,7 +240,7 @@ function printBlocks(
               count++;
             }
             if (count % logEach == 0) {
-              subject.next(runCount);
+              subject.next([runCount, data.blocks[i]]);
               if (printDetails) {
                 prependLog(
                   longBlockString(data.blocks[i], count, data.pagenumber)
