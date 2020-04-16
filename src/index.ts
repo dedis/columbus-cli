@@ -329,7 +329,7 @@ function longBlockString(
     output += `\n--- Verifier ${j}`;
     output += `\n---- ${uid.toString("hex")}`;
   });
-  output += `\n-- Backlinks (${block.verifiers.length}):`;
+  output += `\n-- Backlinks (${block.backlinks.length}):`;
   block.backlinks.forEach((value, j) => {
     output += `\n--- Backlink ${j}`;
     output += `\n---- ${value.toString("hex")}`;
