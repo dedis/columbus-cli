@@ -297,6 +297,7 @@ function longBlockString(
   const body = DataBody.decode(payload);
   body.txResults.forEach((transaction, i) => {
     output += `\n-- Transaction ${i}`;
+    output += `\n--- Accepted: ${transaction.accepted}`;
     transaction.clientTransaction.instructions.forEach((instruction, j) => {
       output += `\n--- Instruction ${j}`;
       output += `\n---- Hash: ${instruction.hash().toString("hex")}`;
