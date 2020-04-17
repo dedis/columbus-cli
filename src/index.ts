@@ -305,6 +305,7 @@ function longBlockString(
       if (instruction.spawn !== null) {
         output += `\n---- Spawn:`;
         output += `\n----- ContractID: ${instruction.spawn.contractID}`;
+        output += `\n----- Empty DeriveID: ${instruction.deriveId("").toString("hex")}`;
         output += `\n----- Args:`;
         instruction.spawn.args.forEach((arg, _) => {
           output += `\n------ Arg:`;
