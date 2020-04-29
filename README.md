@@ -1,5 +1,6 @@
 # columbus-cli
- Naive implementation of a Blockchain visualizer
+
+ Naive implementation of a Blockchain visualizer that works with cothority >= 3.4.3.
 
 
 Run with `npm install && npm bundle`
