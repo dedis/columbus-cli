@@ -40,6 +40,7 @@ var logEachInput: HTMLInputElement;
 var detailsInput: HTMLInputElement;
 var repeatCmdInput: HTMLInputElement;
 var statsTarget: HTMLElement;
+var boatTarget: HTMLElement;
 // To re-use the same ws connection across runs
 var ws: WebSocketAdapter;
 // The roster
@@ -63,6 +64,7 @@ export function sayHi() {
   statsTarget = document.getElementById("stats-info");
   detailsInput = document.getElementById("details-input") as HTMLInputElement;
   repeatCmdInput = document.getElementById("repeat-cmd-input") as HTMLInputElement;
+  boatTarget = document.getElementById("boat");
 
   roster = Roster.fromTOML(rosterStr);
   if (!roster) {
@@ -85,6 +87,9 @@ export function sayHi() {
         ws = undefined;
       }
       document.getElementById("status").innerHTML = "";
+
+      boatTarget.classList.add("anime");
+
       const notifier = new Subject();
       var startTime = performance.now();
       var pageDone = 0;
@@ -103,6 +108,7 @@ export function sayHi() {
               } else {
                 notifier.next();
                 notifier.complete();
+                boatTarget.classList.remove("anime");
               }
             }
           }
@@ -151,6 +157,9 @@ function load(e: Event) {
   var startTime = performance.now();
   var pageDone = 0;
   var repeatCounter = 0
+
+  boatTarget.classList.add("anime");
+
   subject.pipe(takeUntil(notifier)).subscribe({
     // As a reminder: if the observer sends an error or a "complete" message,
     // we cannot use the observer anymore. This is why the ws callback does not
@@ -174,6 +183,7 @@ function load(e: Event) {
           } else {
             notifier.next();
             notifier.complete();
+            boatTarget.classList.remove("anime");
           }
         }
       }
