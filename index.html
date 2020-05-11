@@ -47,6 +47,7 @@
           <label>repeat cmd</label>
           <input type="number" id="repeat-cmd-input" value="0">
         </div>
+        <button id="get-latest">Get latest</button>
       </div>
 
         <div class="text-wrapper">
@@ -218,7 +219,16 @@
         div.options {
           display: flex;
           flex-direction: column;
-          align-items: flex-start;
+          align-items: center;
+        }
+        button#get-latest {
+          margin: 5px 0;
+          padding: 2px 7px;
+          background: none;
+          cursor: pointer;
+        }
+        button#get-latest:active{
+          background: rgba(128, 128, 128, 0.36);
         }
         p#stats-info {
           height: 30px;

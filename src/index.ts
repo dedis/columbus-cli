@@ -9,7 +9,7 @@ import { Roster } from "@dedis/cothority/network/proto";
 import {
   IConnection,
   WebSocketConnection,
-  RosterWSConnection
+  RosterWSConnection,
 } from "@dedis/cothority/network/connection";
 import { StatusRequest, StatusResponse } from "@dedis/cothority/status/proto";
 import StatusRPC from "@dedis/cothority/status/status-rpc";
@@ -17,17 +17,17 @@ import { ByzCoinRPC } from "@dedis/cothority/byzcoin";
 import { DataBody } from "@dedis/cothority/byzcoin/proto";
 import {
   GetSingleBlockByIndexReply,
-  GetSingleBlock
+  GetSingleBlock,
 } from "@dedis/cothority/skipchain/proto";
 import {
   StreamingRequest,
   StreamingResponse,
   PaginateRequest,
-  PaginateResponse
+  PaginateResponse,
 } from "@dedis/cothority/byzcoin/proto/stream";
 import { WebSocketAdapter } from "@dedis/cothority/network";
 
-import { Subject } from "rxjs";
+import { Subject, Observable } from "rxjs";
 import { takeUntil } from "rxjs/operators";
 
 // To keep track of the latest block fetched
@@ -63,7 +63,9 @@ export function sayHi() {
   logEachInput = document.getElementById("log-each-input") as HTMLInputElement;
   statsTarget = document.getElementById("stats-info");
   detailsInput = document.getElementById("details-input") as HTMLInputElement;
-  repeatCmdInput = document.getElementById("repeat-cmd-input") as HTMLInputElement;
+  repeatCmdInput = document.getElementById(
+    "repeat-cmd-input"
+  ) as HTMLInputElement;
   boatTarget = document.getElementById("boat");
 
   roster = Roster.fromTOML(rosterStr);
@@ -77,7 +79,7 @@ export function sayHi() {
       const firstBlockID = inputBlock.value;
       const pageSize = parseInt(numBlocksInput.value);
       const numPages = parseInt(numPagesInput.value);
-      const repeat = parseInt(repeatCmdInput.value)
+      const repeat = parseInt(repeatCmdInput.value);
       logEach = parseInt(logEachInput.value);
       printDetails = detailsInput.checked;
       statsTarget.innerText = "";
@@ -112,13 +114,15 @@ export function sayHi() {
               }
             }
           }
-        }
+        },
       });
       printBlocks(firstBlockID, pageSize, numPages, false);
     });
 
   document.getElementById("forward-button").addEventListener("click", load);
   document.getElementById("backward-button").addEventListener("click", load);
+
+  document.getElementById("get-latest").addEventListener("click", printLatest);
 }
 
 // Called by the "next" and "previous" buttons. It fetches the options in case
@@ -150,13 +154,13 @@ function load(e: Event) {
   }
   const pageSize = parseInt(numBlocksInput.value);
   const numPages = parseInt(numPagesInput.value);
-  const repeat = parseInt(repeatCmdInput.value)
+  const repeat = parseInt(repeatCmdInput.value);
   logEach = parseInt(logEachInput.value);
   printDetails = detailsInput.checked;
   const notifier = new Subject();
   var startTime = performance.now();
   var pageDone = 0;
-  var repeatCounter = 0
+  var repeatCounter = 0;
 
   boatTarget.classList.add("anime");
 
@@ -171,9 +175,9 @@ function load(e: Event) {
         if (pageDone == numPages) {
           printStat(startTime, pageDone * pageSize);
           if (repeatCounter < repeat) {
-            repeatCounter++
+            repeatCounter++;
             var next: string;
-            if (reversed) { 
+            if (reversed) {
               next = skipBlock.backlinks[0].toString("hex");
             } else {
               next = skipBlock.forwardLinks[0].to.toString("hex");
@@ -187,7 +191,7 @@ function load(e: Event) {
           }
         }
       }
-    }
+    },
   });
   printBlocks(nextID, pageSize, numPages, reversed);
 }
@@ -222,15 +226,18 @@ function printBlocks(
   if (ws === undefined) {
     var count = 0;
 
-    conn.sendStream<PaginateResponse>(
-      new PaginateRequest({
-        startid: bid,
-        pagesize: pageSize,
-        numpages: numPages,
-        backward: backward
-      }),
-      PaginateResponse).subscribe({
-      // ws callback "onMessage":
+    conn
+      .sendStream<PaginateResponse>(
+        new PaginateRequest({
+          startid: bid,
+          pagesize: pageSize,
+          numpages: numPages,
+          backward: backward,
+        }),
+        PaginateResponse
+      )
+      .subscribe({
+        // ws callback "onMessage":
         next: ([data, localws]) => {
           if (data.errorcode != 0) {
             prependLog(
@@ -238,8 +245,8 @@ function printBlocks(
             );
             return;
           }
-          if( localws !== undefined) {
-            ws = localws
+          if (localws !== undefined) {
+            ws = localws;
           }
           var runCount = 0;
           for (var i = 0; i < data.blocks.length; i++) {
@@ -270,14 +277,14 @@ function printBlocks(
         error: (err: Error) => {
           prependLog("error: ", err);
           ws = undefined;
-        }
+        },
       });
   } else {
     const message = new PaginateRequest({
       startid: bid,
       pagesize: pageSize,
       numpages: numPages,
-      backward: backward
+      backward: backward,
     });
     const messageByte = Buffer.from(message.$type.encode(message).finish());
     ws.send(messageByte);
@@ -315,7 +322,9 @@ function longBlockString(
       if (instruction.spawn !== null) {
         output += `\n---- Spawn:`;
         output += `\n----- ContractID: ${instruction.spawn.contractID}`;
-        output += `\n----- Empty DeriveID: ${instruction.deriveId("").toString("hex")}`;
+        output += `\n----- Empty DeriveID: ${instruction
+          .deriveId("")
+          .toString("hex")}`;
         output += `\n----- Args:`;
         instruction.spawn.args.forEach((arg, _) => {
           output += `\n------ Arg:`;
@@ -354,6 +363,91 @@ function longBlockString(
     output += `\n---- signature: ${fl.signature.sig.toString("hex")}`;
   });
   return output;
+}
+
+// printLatest is the handler attached to the "Get latest" button.
+function printLatest(e: Event) {
+  if (lastBlock === undefined) {
+    prependLog("please first load a page");
+    return;
+  }
+
+  boatTarget.classList.add("anime");
+
+  getLatestBlock(lastBlock.hash.toString("hex"), roster).subscribe({
+    next: (block) => {
+      prependLog(
+        `latest block found: ${block.hash.toString("hex")} with index ${
+          block.index
+        }`
+      );
+      boatTarget.classList.remove("anime");
+    },
+    error: (e) => {
+      prependLog("failed to get latest block", e);
+    },
+  });
+}
+
+// getLatestBlock follows the highest possible forward links from the given
+// block ID (hex hash) until the last known block of the chain and notifies the
+// observer with the latest block.
+function getLatestBlock(
+  startID: string,
+  roster: Roster
+): Observable<SkipBlock> {
+  return new Observable((sub) => {
+    let nextID = Buffer.from(startID, "hex");
+
+    try {
+      var conn = new WebSocketConnection(
+        roster.list[0].getWebSocketAddress(),
+        ByzCoinRPC.serviceName
+      );
+    } catch (error) {
+      sub.error(error);
+    }
+    conn
+      .sendStream<PaginateResponse>( // fetch next block
+        new PaginateRequest({
+          startid: nextID,
+          pagesize: 1,
+          numpages: 1,
+          backward: false,
+        }),
+        PaginateResponse
+      )
+      .subscribe({
+        complete: () => {
+          sub.error("unexpected paginate complete");
+        },
+        error: (err: Error) => {
+          sub.error(err);
+        },
+        // ws callback "onMessage":
+        next: ([data, ws]) => {
+          if (data.errorcode != 0) {
+            sub.error(data.errortext);
+          }
+          const block = data.blocks[0];
+          if (block.forwardLinks.length === 0) {
+            sub.next(block);
+          } else {
+            nextID = block.forwardLinks[block.forwardLinks.length - 1].to;
+            const message = new PaginateRequest({
+              startid: nextID,
+              pagesize: 1,
+              numpages: 1,
+              backward: false,
+            });
+            const messageByte = Buffer.from(
+              message.$type.encode(message).finish()
+            );
+            ws.send(messageByte); // fetch next block
+          }
+        },
+      });
+  });
 }
 
 //
