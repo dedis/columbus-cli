@@ -28,10 +28,10 @@ jobs:
       run: |
         echo "${{secrets.DEPLOY_KEY}}" > deploy_key
         chmod 600 ./deploy_key
-        rsync -chavr --delete \
+        rsync -chav --delete \
           -e 'ssh -p ${{secrets.DEPLOY_PORT}} -i ./deploy_key -o StrictHostKeyChecking=no' \
-           --exclude='.DS_Store' \
-           --include=index.html \
-           --include='dist/***' \
-           --exclude='*'
+          --exclude='.DS_Store' \
+          --include=index.html \
+          --include='dist/***' \
+          --exclude='*' \
           ./ ${{env.dest}}
