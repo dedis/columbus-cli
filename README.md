@@ -1,7 +1,7 @@
 # columbus-cli
 
 ![Prettier](https://github.com/dedis/columbus-cli/workflows/Prettier/badge.svg)
-![licence](https://img.shields.io/github/license/dedis/columbus-cli)
+![Wookiee deployment](https://github.com/dedis/columbus-cli/workflows/Wookiee%20deployment/badge.svg)
 ![https://wookiee.ch/columbus/](https://img.shields.io/uptimerobot/ratio/m784899913-827a358778c97405361b6409)
 ![release](https://img.shields.io/github/v/release/dedis/columbus-cli)
 
