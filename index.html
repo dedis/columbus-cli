@@ -10,24 +10,24 @@
       <div class="form">
          <div class="row">
              <label>First block to fetch</label>
-             <input type="text" id="block-input" value="9cc36071ccb902a1de7e0d21a2c176d73894b1cf88ae4cc2ba4c95cd76f474f3"/>
+             <input title="The first block to fetch when a new 'Load' is done." type="text" id="block-input" value="9cc36071ccb902a1de7e0d21a2c176d73894b1cf88ae4cc2ba4c95cd76f474f3"/>
          </div>
          <div class="navigation">
              <div class="row">
-                 <button id="load-button">Load</button>
+                 <button title="Makes a new paginate request, starting from the block specified in 'First block to fetch'." id="load-button">Load</button>
              </div>
              <div class="row">
-                 <button data-reversed="true" id="backward-button">◀︎</button>
+                 <button title="Makes a new paginate request to load the previous blocks of the chain." data-reversed="true" id="backward-button">◀︎</button>
                  <div class="numb">
                      <label>Blocks/page</label>
-                     <input type="number" id="num-blocks-input" value="5">
+                     <input title="'Blocks/page' defines the number of blocks each page will contain. A page is an asynchronous call sent back from the node." type="number" id="num-blocks-input" value="5">
                  </div>
-                 <button id="forward-button">▶︎</button>
+                 <button title="Makes a new paginate request to load the next blocks of the chain." id="forward-button">▶︎</button>
               </div>
               <div class="row">
                  <div class="numb">
                    <label>num pages</label>
-                   <input type="number" id="num-pages-input" value="1">
+                   <input title="'num pages' defines the number of asynchronous call the server will sent back, with each call containing 'Blocks/page' blocks." type="number" id="num-pages-input" value="1">
                  </div>
               </div>
          </div>
@@ -36,23 +36,23 @@
       <div class="options">
         <div class="numb">
           <label>log each</label>
-          <input type="number" id="log-each-input" value="1">
+          <input title="'log each' defines the interval at which blocks are printed. A value of 2 means that we print one block out of two. A value of 1 means all the blocks are printed." type="number" id="log-each-input" value="1">
         </div>
         <a style="display: none" id="download-link">Download results</a>
         <div class="numb">
           <label>print details</label>
-          <input id="details-input" type="checkbox">
+          <input title="Prints the details of each block. Is also used to display more details for the status." id="details-input" type="checkbox">
         </div>
         <div class="numb">
           <label>print roster</label>
-          <input id="roster-input" type="checkbox">
+          <input title="If checked, the roster is printed on each block, as well as when the status is fetched." id="roster-input" type="checkbox">
         </div>
         <div class="numb">
           <label>repeat cmd</label>
-          <input type="number" id="repeat-cmd-input" value="0">
+          <input title="The number of times the 'Load', '◀︎', or '▶︎' is repeated. This features is mostly interesting from the code side." type="number" id="repeat-cmd-input" value="0">
         </div>
-        <button id="get-latest">Get latest</button>
-        <button id="get-status">Get status</button>
+        <button title="Fetch the latest block starting from the latest loaded block, or the one specified in the 'First block to fetch' input if none have been loaded yet. If follows the highest forward link on each block, until reaching a block with no forward link." id="get-latest">Get latest</button>
+        <button title="Fetch the roster from the latest block and display the status of each node. Takes into account the 'print details' and 'print roster' options. If no blocks have been loaded, it gets the latest block starting from the one in the 'First block to fetch' input. Otherwise, it takes the latest block loaded." id="get-status">Get status</button>
       </div>
 
         <div class="text-wrapper">
