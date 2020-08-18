@@ -9,7 +9,8 @@
     "watch": "webpack --watch",
     "makePretty": "prettier --write \"src/**/*{.ts,.js}\"",
     "isPretty": "prettier --check \"src/**/*{.ts,.js}\"",
-      "lint": "tslint 'src/{,**/}*.ts' 'spec/{,**/}*.ts'"
+    "lint": "tslint 'src/{,**/}*.ts' 'spec/{,**/}*.ts'",
+    "makeRelease": "npm run bundle && mkdir columbus-cli && cp index.html columbus-cli && cp -r dist columbus-cli && tar czf columbus-cli.tar.gz columbus-cli"
   },
   "author": "",
   "license": "ISC",
