@@ -3,54 +3,45 @@
 // Duplex streaming navigator
 // An improved version using Observable
 //
-
-import { SkipchainRPC, SkipBlock } from "@dedis/cothority/skipchain";
-import { Roster } from "@dedis/cothority/network/proto";
-import {
-  IConnection,
-  WebSocketConnection,
-  RosterWSConnection,
-} from "@dedis/cothority/network/connection";
-import { StatusRequest, StatusResponse } from "@dedis/cothority/status/proto";
-import StatusRPC from "@dedis/cothority/status/status-rpc";
 import { ByzCoinRPC } from "@dedis/cothority/byzcoin";
 import { DataBody } from "@dedis/cothority/byzcoin/proto";
 import {
-  GetSingleBlockByIndexReply,
-  GetSingleBlock,
-} from "@dedis/cothority/skipchain/proto";
-import {
-  StreamingRequest,
-  StreamingResponse,
   PaginateRequest,
   PaginateResponse,
 } from "@dedis/cothority/byzcoin/proto/stream";
-import { WebSocketAdapter } from "@dedis/cothority/network";
-
-import { Subject, Observable } from "rxjs";
+import {
+  WebSocketAdapter,
+  WebSocketConnection,
+} from "@dedis/cothority/network";
+import { Roster } from "@dedis/cothority/network/proto";
+import { SkipBlock } from "@dedis/cothority/skipchain";
+import { StatusRPC } from "@dedis/cothority/status";
+import { Observable, Subject } from "rxjs";
 import { takeUntil } from "rxjs/operators";
 
 // To keep track of the latest block fetched
-var lastBlock: SkipBlock;
+let lastBlock: SkipBlock;
 // HTML form elements that holds the user's options
-var numBlocksInput: HTMLInputElement;
-var numPagesInput: HTMLInputElement;
-var inputBlock: HTMLInputElement;
-var logEachInput: HTMLInputElement;
-var detailsInput: HTMLInputElement;
-var repeatCmdInput: HTMLInputElement;
-var statsTarget: HTMLElement;
-var boatTarget: HTMLElement;
+let numBlocksInput: HTMLInputElement;
+let numPagesInput: HTMLInputElement;
+let inputBlock: HTMLInputElement;
+let logEachInput: HTMLInputElement;
+let detailsInput: HTMLInputElement;
+let rosterInput: HTMLInputElement;
+let repeatCmdInput: HTMLInputElement;
+let statsTarget: HTMLElement;
+let boatTarget: HTMLElement;
 // To re-use the same ws connection across runs
-var ws: WebSocketAdapter;
+let ws: WebSocketAdapter;
 // The roster
-var roster: Roster;
+let roster: Roster;
 // Used from the ws callback to send events to the caller
 const subject = new Subject<[number, SkipBlock]>();
-// Those two need to be global so we can update them across multiple ws
+// Those three need to be global so we can update them across multiple ws
 // callback
-var printDetails: boolean;
-var logEach: number;
+let printDetails: boolean;
+let printRoster: boolean;
+let logEach: number;
 
 export function sayHi() {
   numBlocksInput = document.getElementById(
@@ -63,6 +54,7 @@ export function sayHi() {
   logEachInput = document.getElementById("log-each-input") as HTMLInputElement;
   statsTarget = document.getElementById("stats-info");
   detailsInput = document.getElementById("details-input") as HTMLInputElement;
+  rosterInput = document.getElementById("roster-input") as HTMLInputElement;
   repeatCmdInput = document.getElementById(
     "repeat-cmd-input"
   ) as HTMLInputElement;
@@ -77,14 +69,15 @@ export function sayHi() {
     .getElementById("load-button")
     .addEventListener("click", (e: Event) => {
       const firstBlockID = inputBlock.value;
-      const pageSize = parseInt(numBlocksInput.value);
-      const numPages = parseInt(numPagesInput.value);
-      const repeat = parseInt(repeatCmdInput.value);
-      logEach = parseInt(logEachInput.value);
+      const pageSize = parseInt(numBlocksInput.value, 10);
+      const numPages = parseInt(numPagesInput.value, 10);
+      const repeat = parseInt(repeatCmdInput.value, 10);
+      logEach = parseInt(logEachInput.value, 10);
       printDetails = detailsInput.checked;
+      printRoster = rosterInput.checked;
       statsTarget.innerText = "";
 
-      if (ws != undefined) {
+      if (ws !== undefined) {
         ws.close(1000, "new load");
         ws = undefined;
       }
@@ -93,14 +86,14 @@ export function sayHi() {
       boatTarget.classList.add("anime");
 
       const notifier = new Subject();
-      var startTime = performance.now();
-      var pageDone = 0;
-      var repeatCounter = 0;
+      const startTime = performance.now();
+      let pageDone = 0;
+      let repeatCounter = 0;
       subject.pipe(takeUntil(notifier)).subscribe({
         next: ([i, skipBlock]) => {
-          if (i == pageSize) {
+          if (i === pageSize) {
             pageDone++;
-            if (pageDone == numPages) {
+            if (pageDone === numPages) {
               printStat(startTime, pageDone * pageSize);
               if (repeatCounter < repeat) {
                 repeatCounter++;
@@ -123,6 +116,7 @@ export function sayHi() {
   document.getElementById("backward-button").addEventListener("click", load);
 
   document.getElementById("get-latest").addEventListener("click", printLatest);
+  document.getElementById("get-status").addEventListener("click", printStatus);
 }
 
 // Called by the "next" and "previous" buttons. It fetches the options in case
@@ -134,33 +128,34 @@ function load(e: Event) {
     return;
   }
 
-  var reversed: boolean;
-  var nextID: string;
+  let reversed: boolean;
+  let nextID: string;
 
-  if ((<HTMLInputElement>e.currentTarget).dataset.reversed === "true") {
+  if ((e.currentTarget as HTMLInputElement).dataset.reversed === "true") {
     reversed = true;
-    if (lastBlock.backlinks.length == 0) {
-      prependLog("no more blocks to fetch (list of backlinks empty");
+    if (lastBlock.backlinks.length === 0) {
+      prependLog("no more blocks to fetch (list of backlinks empty)");
       return;
     }
     nextID = lastBlock.backlinks[0].toString("hex");
   } else {
     reversed = false;
-    if (lastBlock.forwardLinks.length == 0) {
-      prependLog("no more blocks to fetch (list of forwardlinks empty");
+    if (lastBlock.forwardLinks.length === 0) {
+      prependLog("no more blocks to fetch (list of forwardlinks empty)");
       return;
     }
     nextID = lastBlock.forwardLinks[0].to.toString("hex");
   }
-  const pageSize = parseInt(numBlocksInput.value);
-  const numPages = parseInt(numPagesInput.value);
-  const repeat = parseInt(repeatCmdInput.value);
-  logEach = parseInt(logEachInput.value);
+  const pageSize = parseInt(numBlocksInput.value, 10);
+  const numPages = parseInt(numPagesInput.value, 10);
+  const repeat = parseInt(repeatCmdInput.value, 10);
+  logEach = parseInt(logEachInput.value, 10);
   printDetails = detailsInput.checked;
+  printRoster = rosterInput.checked;
   const notifier = new Subject();
-  var startTime = performance.now();
-  var pageDone = 0;
-  var repeatCounter = 0;
+  const startTime = performance.now();
+  let pageDone = 0;
+  let repeatCounter = 0;
 
   boatTarget.classList.add("anime");
 
@@ -170,13 +165,13 @@ function load(e: Event) {
     // send an observer error if one occurs, since we need to keep the same
     // observer during the entire session.
     next: ([i, skipBlock]) => {
-      if (i == pageSize) {
+      if (i === pageSize) {
         pageDone++;
-        if (pageDone == numPages) {
+        if (pageDone === numPages) {
           printStat(startTime, pageDone * pageSize);
           if (repeatCounter < repeat) {
             repeatCounter++;
-            var next: string;
+            let next: string;
             if (reversed) {
               next = skipBlock.backlinks[0].toString("hex");
             } else {
@@ -196,7 +191,7 @@ function load(e: Event) {
   printBlocks(nextID, pageSize, numPages, reversed);
 }
 
-// This funtion calls the sendStream with the corresponding paginateBlocks
+// This function calls the sendStream with the corresponding paginateBlocks
 // request. If the ws is already defined, it does not create a new one by
 // calling again the sendStream function, but directly call a send on the ws
 function printBlocks(
@@ -205,7 +200,7 @@ function printBlocks(
   numPages: number,
   backward: boolean
 ) {
-  var bid: Buffer;
+  let bid: Buffer;
   try {
     bid = hex2Bytes(firstBlockID);
   } catch (error) {
@@ -213,8 +208,9 @@ function printBlocks(
     return;
   }
 
+  let conn: WebSocketConnection;
   try {
-    var conn = new WebSocketConnection(
+    conn = new WebSocketConnection(
       roster.list[0].getWebSocketAddress(),
       ByzCoinRPC.serviceName
     );
@@ -224,21 +220,29 @@ function printBlocks(
   }
 
   if (ws === undefined) {
-    var count = 0;
+    let count = 0;
 
     conn
       .sendStream<PaginateResponse>(
         new PaginateRequest({
-          startid: bid,
-          pagesize: pageSize,
+          backward,
           numpages: numPages,
-          backward: backward,
+          pagesize: pageSize,
+          startid: bid,
         }),
         PaginateResponse
       )
       .subscribe({
+        complete: () => {
+          prependLog("closed");
+        },
+        error: (err: Error) => {
+          prependLog("error: ", err);
+          ws = undefined;
+        },
         // ws callback "onMessage":
         next: ([data, localws]) => {
+          // tslint:disable-next-line
           if (data.errorcode != 0) {
             prependLog(
               `got an error with code ${data.errorcode} : ${data.errortext}`
@@ -248,43 +252,28 @@ function printBlocks(
           if (localws !== undefined) {
             ws = localws;
           }
-          var runCount = 0;
-          for (var i = 0; i < data.blocks.length; i++) {
+          let runCount = 0;
+          for (const block of data.blocks) {
             runCount++;
             if (data.backward) {
               count--;
             } else {
               count++;
             }
-            if (count % logEach == 0) {
-              subject.next([runCount, data.blocks[i]]);
-              if (printDetails) {
-                prependLog(
-                  longBlockString(data.blocks[i], count, data.pagenumber)
-                );
-              } else {
-                prependLog(
-                  shortBlockString(data.blocks[i], count, data.pagenumber)
-                );
-              }
+            if (count % logEach === 0) {
+              subject.next([runCount, block]);
+              prependLog(printBlock(block, count, data.pagenumber));
             }
           }
           lastBlock = data.blocks[data.blocks.length - 1];
         },
-        complete: () => {
-          prependLog("closed");
-        },
-        error: (err: Error) => {
-          prependLog("error: ", err);
-          ws = undefined;
-        },
       });
   } else {
     const message = new PaginateRequest({
-      startid: bid,
-      pagesize: pageSize,
+      backward,
       numpages: numPages,
-      backward: backward,
+      pagesize: pageSize,
+      startid: bid,
     });
     const messageByte = Buffer.from(message.$type.encode(message).finish());
     ws.send(messageByte);
@@ -292,24 +281,26 @@ function printBlocks(
 }
 
 // Makes a short string representation of a block
-function shortBlockString(
+function printBlock(
   block: SkipBlock,
   blockIndex: number,
   pageNum: number
 ): string {
-  var output = `- block: ${blockIndex}, page ${pageNum}, hash: ${block.hash.toString(
+  let output = `- block: ${blockIndex}, page ${pageNum}, hash: ${block.hash.toString(
     "hex"
   )}`;
+  if (printDetails) {
+    output += printDetailBlock(block);
+  }
+  if (printRoster) {
+    output += printRosterBlock(block);
+  }
   return output;
 }
 
 // Makes a detailed string representation of a block
-function longBlockString(
-  block: SkipBlock,
-  blockIndex: number,
-  pageNum: number
-): string {
-  var output = shortBlockString(block, blockIndex, pageNum);
+function printDetailBlock(block: SkipBlock): string {
+  let output = "";
   const payload = block.payload;
   const body = DataBody.decode(payload);
   body.txResults.forEach((transaction, i) => {
@@ -365,16 +356,41 @@ function longBlockString(
   return output;
 }
 
+function printRosterBlock(block: SkipBlock): string {
+  let output = "";
+  output += `\n-- Roster:`;
+  output += `\n--- Aggregate: ${block.roster.aggregate.toString("hex")}`;
+  output += `\n--- ServerIdentities (${block.roster.length})`;
+  block.roster.list.forEach((si, j) => {
+    output += `\n---- SeverIdentity ${j}`;
+    output += `\n----- Address: ${si.address}`;
+    output += `\n----- Public: ${si
+      .getPublic()
+      .marshalBinary()
+      .toString("hex")}`;
+    output += `\n----- Description: ${si.description}`;
+    output += `\n----- URL: ${si.url}`;
+  });
+  return output;
+}
+
 // printLatest is the handler attached to the "Get latest" button.
 function printLatest(e: Event) {
+  let blockHash: string;
+
   if (lastBlock === undefined) {
-    prependLog("please first load a page");
-    return;
+    blockHash = inputBlock.value;
+  } else {
+    blockHash = lastBlock.hash.toString("hex");
   }
 
   boatTarget.classList.add("anime");
+  prependLog(`getting latest block starting from ${blockHash}...`);
 
-  getLatestBlock(lastBlock.hash.toString("hex"), roster).subscribe({
+  getLatestBlock(blockHash).subscribe({
+    error: (err) => {
+      prependLog("failed to get latest block ", err);
+    },
     next: (block) => {
       prependLog(
         `latest block found: ${block.hash.toString("hex")} with index ${
@@ -383,24 +399,19 @@ function printLatest(e: Event) {
       );
       boatTarget.classList.remove("anime");
     },
-    error: (e) => {
-      prependLog("failed to get latest block", e);
-    },
   });
 }
 
 // getLatestBlock follows the highest possible forward links from the given
 // block ID (hex hash) until the last known block of the chain and notifies the
 // observer with the latest block.
-function getLatestBlock(
-  startID: string,
-  roster: Roster
-): Observable<SkipBlock> {
+function getLatestBlock(startID: string): Observable<SkipBlock> {
   return new Observable((sub) => {
     let nextID = Buffer.from(startID, "hex");
+    let conn: WebSocketConnection;
 
     try {
-      var conn = new WebSocketConnection(
+      conn = new WebSocketConnection(
         roster.list[0].getWebSocketAddress(),
         ByzCoinRPC.serviceName
       );
@@ -410,10 +421,10 @@ function getLatestBlock(
     conn
       .sendStream<PaginateResponse>( // fetch next block
         new PaginateRequest({
-          startid: nextID,
-          pagesize: 1,
-          numpages: 1,
           backward: false,
+          numpages: 1,
+          pagesize: 1,
+          startid: nextID,
         }),
         PaginateResponse
       )
@@ -425,20 +436,26 @@ function getLatestBlock(
           sub.error(err);
         },
         // ws callback "onMessage":
-        next: ([data, ws]) => {
+        next: ([data, localws]) => {
+          // tslint:disable-next-line
           if (data.errorcode != 0) {
             sub.error(data.errortext);
           }
+          if (localws !== undefined) {
+            ws = localws;
+          }
+
           const block = data.blocks[0];
           if (block.forwardLinks.length === 0) {
             sub.next(block);
+            sub.complete();
           } else {
             nextID = block.forwardLinks[block.forwardLinks.length - 1].to;
             const message = new PaginateRequest({
-              startid: nextID,
-              pagesize: 1,
-              numpages: 1,
               backward: false,
+              numpages: 1,
+              pagesize: 1,
+              startid: nextID,
             });
             const messageByte = Buffer.from(
               message.$type.encode(message).finish()
@@ -450,15 +467,72 @@ function getLatestBlock(
   });
 }
 
+// printStatus is the handler attached to the "Print status" button.
+function printStatus(e: Event) {
+  let blockHash: string;
+
+  if (lastBlock === undefined) {
+    blockHash = inputBlock.value;
+  } else {
+    blockHash = lastBlock.hash.toString("hex");
+  }
+
+  printDetails = detailsInput.checked;
+  printRoster = rosterInput.checked;
+
+  boatTarget.classList.add("anime");
+
+  prependLog(
+    `getting the roster from the latest block, starting from ${blockHash}...`
+  );
+
+  getLatestBlock(blockHash).subscribe({
+    error: (err) => {
+      prependLog("failed to get latest block ", err);
+    },
+    next: (block) => {
+      prependLog(
+        `latest block found: ${block.hash.toString("hex")} with index ${
+          block.index
+        }`
+      );
+
+      if (printRoster) {
+        prependLog(`Using the following roster:\n${printRosterBlock(block)}`);
+      }
+
+      const status = new StatusRPC(block.roster);
+      boatTarget.classList.remove("anime");
+      for (let i = 0; i < block.roster.length; i++) {
+        status.getStatus(i).then((resp) => {
+          if (printDetails) {
+            prependLog(resp.toString());
+          } else {
+            prependLog(
+              `${block.roster.list[i].url} (${
+                block.roster.list[i].address
+              }):\n> uptime: ${resp
+                .getStatus("Generic")
+                .getValue("Uptime")}\n> Tx / Rx bytes: ${resp
+                .getStatus("Generic")
+                .getValue("TX_bytes")} / ${resp
+                .getStatus("Generic")
+                .getValue("RX_bytes")}`
+            );
+          }
+        });
+      }
+    },
+  });
+}
+
 //
 // Print log stuff
 //
 
-var logCounter = 0;
-var blockCounter = 0;
-var statusHolder: HTMLElement;
-var keepScroll: HTMLInputElement;
-var t0: number;
+let logCounter = 0;
+let statusHolder: HTMLElement;
+let keepScroll: HTMLInputElement;
 
 export function prependLog(...nodes: Array<Node | any>) {
   const wrapper = document.createElement("div");
@@ -482,7 +556,7 @@ function updateScroll() {
   if (keepScroll === undefined) {
     keepScroll = document.getElementById("keep-scroll") as HTMLInputElement;
   }
-  if (keepScroll.checked == true) {
+  if (keepScroll.checked === true) {
     statusHolder.scrollTop = statusHolder.scrollHeight;
   }
 }

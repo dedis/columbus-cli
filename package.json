@@ -8,31 +8,32 @@
     "bundle": "webpack",
     "watch": "webpack --watch",
     "makePretty": "prettier --write \"src/**/*{.ts,.js}\"",
-    "isPretty": "prettier --check \"src/**/*{.ts,.js}\""
+    "isPretty": "prettier --check \"src/**/*{.ts,.js}\"",
+      "lint": "tslint 'src/{,**/}*.ts' 'spec/{,**/}*.ts'"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@dedis/cothority": "^3.4.4",
-    "rxjs": "^6.5.4"
+    "@dedis/cothority": "^3.5.1",
+    "rxjs": "^6.6.2"
   },
   "devDependencies": {
-    "@babel/core": "^7.7.7",
-    "@babel/preset-env": "^7.7.7",
-    "@types/dockerode": "^2.5.21",
-    "@types/jasmine": "^3.5.0",
-    "@types/long": "^4.0.0",
-    "babel-loader": "^8.0.6",
-    "dockerode": "^3.0.2",
-    "jasmine": "^3.5.0",
+    "@babel/core": "^7.11.1",
+    "@babel/preset-env": "^7.11.0",
+    "@types/dockerode": "^2.5.34",
+    "@types/jasmine": "^3.5.12",
+    "@types/long": "^4.0.1",
+    "babel-loader": "^8.1.0",
+    "dockerode": "^3.2.1",
+    "jasmine": "^3.6.1",
     "jasmine-console-reporter": "^3.1.0",
-    "nyc": "^15.0.0",
+    "nyc": "^15.1.0",
     "prettier": "2.0.5",
-    "ts-loader": "^6.2.1",
-    "ts-node": "^8.5.4",
+    "ts-loader": "^6.2.2",
+    "ts-node": "^8.10.2",
     "tslint": "^5.20.1",
-    "typescript": "^3.7.4",
-    "webpack": "^4.41.5",
-    "webpack-cli": "^3.3.10"
+    "typescript": "^3.9.7",
+    "webpack": "^4.44.1",
+    "webpack-cli": "^3.3.12"
   }
 }

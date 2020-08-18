@@ -44,10 +44,15 @@
           <input id="details-input" type="checkbox">
         </div>
         <div class="numb">
+          <label>print roster</label>
+          <input id="roster-input" type="checkbox">
+        </div>
+        <div class="numb">
           <label>repeat cmd</label>
           <input type="number" id="repeat-cmd-input" value="0">
         </div>
         <button id="get-latest">Get latest</button>
+        <button id="get-status">Get status</button>
       </div>
 
         <div class="text-wrapper">
@@ -221,13 +226,13 @@
           flex-direction: column;
           align-items: center;
         }
-        button#get-latest {
+        button#get-latest, button#get-status {
           margin: 5px 0;
           padding: 2px 7px;
           background: none;
           cursor: pointer;
         }
-        button#get-latest:active{
+        button#get-latest:active, button#get-status:active{
           background: rgba(128, 128, 128, 0.36);
         }
         p#stats-info {
