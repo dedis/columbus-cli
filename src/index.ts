@@ -324,6 +324,7 @@ function printDetailBlock(block: SkipBlock): string {
         });
       } else if (instruction.invoke !== null) {
         output += `\n---- Invoke:`;
+        output += `\n----- Command: ${instruction.invoke.command}`;
         output += `\n----- ContractID: ${instruction.invoke.contractID}`;
         output += `\n----- Args:`;
         instruction.invoke.args.forEach((arg, _) => {
