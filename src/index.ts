@@ -4,7 +4,7 @@
 // An improved version using Observable
 //
 import { ByzCoinRPC } from "@dedis/cothority/byzcoin";
-import { DataBody } from "@dedis/cothority/byzcoin/proto";
+import { DataBody, DataHeader } from "@dedis/cothority/byzcoin/proto";
 import {
   PaginateRequest,
   PaginateResponse,
@@ -303,6 +303,11 @@ function printDetailBlock(block: SkipBlock): string {
   let output = "";
   const payload = block.payload;
   const body = DataBody.decode(payload);
+  const header = DataHeader.decode(block.data);
+  const d = new Date(header.timestamp.div(1000000).toNumber());
+
+  output += `\n-- Timestamps: ${d.toUTCString()}`;
+
   body.txResults.forEach((transaction, i) => {
     output += `\n-- Transaction ${i}`;
     output += `\n--- Accepted: ${transaction.accepted}`;
