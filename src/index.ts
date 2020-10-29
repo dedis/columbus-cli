@@ -356,6 +356,7 @@ function printDetailBlock(block: SkipBlock): string {
   block.forwardLinks.forEach((fl, j) => {
     output += `\n--- Forwardlink ${j}`;
     output += `\n---- from: ${fl.from.toString("hex")}`;
+    output += `\n---- to: ${fl.to.toString("hex")}`;
     output += `\n---- hash: ${fl.hash().toString("hex")}`;
     output += `\n---- signature: ${fl.signature.sig.toString("hex")}`;
   });
