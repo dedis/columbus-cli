@@ -235,6 +235,7 @@ function printBlocks(
       .subscribe({
         complete: () => {
           prependLog("closed");
+          ws = undefined;
         },
         error: (err: Error) => {
           prependLog("error: ", err);
@@ -312,6 +313,9 @@ function printDetailBlock(block: SkipBlock): string {
     output += `\n-- Transaction ${i}`;
     output += `\n--- Accepted: ${transaction.accepted}`;
     transaction.clientTransaction.instructions.forEach((instruction, j) => {
+
+      const b = instruction.beautify();
+      
       output += `\n--- Instruction ${j}`;
       output += `\n---- Hash: ${instruction.hash().toString("hex")}`;
       output += `\n---- Instance ID: ${instruction.instanceID.toString("hex")}`;
@@ -321,25 +325,22 @@ function printDetailBlock(block: SkipBlock): string {
         output += `\n----- Empty DeriveID: ${instruction
           .deriveId("")
           .toString("hex")}`;
-        output += `\n----- Args:`;
-        instruction.spawn.args.forEach((arg, _) => {
-          output += `\n------ Arg:`;
-          output += `\n------- Name: ${arg.name}`;
-          output += `\n------- Value: ${arg.value}`;
-        });
       } else if (instruction.invoke !== null) {
         output += `\n---- Invoke:`;
         output += `\n----- Command: ${instruction.invoke.command}`;
         output += `\n----- ContractID: ${instruction.invoke.contractID}`;
-        output += `\n----- Args:`;
-        instruction.invoke.args.forEach((arg, _) => {
-          output += `\n------ Arg:`;
-          output += `\n------- Name: ${arg.name}`;
-          output += `\n------- Value: ${arg.value}`;
-        });
       } else if (instruction.delete !== null) {
         output += `\n---- Delete: ${instruction.delete}`;
       }
+      output += `\n----- Args:`;
+      b.args.forEach((arg, _) => {
+        output += `\n------ Arg:`;
+        output += `\n------- Name: ${arg.name}`;
+        output += `\n------- Value: ${arg.value}`;
+        if (arg.full !== undefined) {
+          output += `\n------- Full: ${arg.full}`;
+        }
+      });
     });
   });
   output += `\n-- Verifiers (${block.verifiers.length}):`;
