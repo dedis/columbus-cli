@@ -8,6 +8,8 @@
     "bundle": "webpack",
     "watch": "webpack --watch",
     "protobuf": "node scripts/build_proto.js",
+    "makePretty": "prettier --write \"src/**/*{.ts,.js}\"",
+    "isPretty": "prettier --check \"src/**/*{.ts,.js}\"",
     "makeRelease": "npm run bundle && mkdir columbus-cli && cp index.html columbus-cli && cp -r dist columbus-cli && tar czf columbus-cli.tar.gz columbus-cli"
   },
   "author": "",

@@ -18,10 +18,18 @@ import { SkipBlock } from "@dedis/cothority/skipchain";
 import { StatusRPC } from "@dedis/cothority/status";
 import { Observable, Subject } from "rxjs";
 import { takeUntil } from "rxjs/operators";
-import { CatchUpMsg, CatchUpResponse, EmptyReply, Follow, Query, QueryReply, Unfollow } from "./bypros";
+import {
+  CatchUpMsg,
+  CatchUpResponse,
+  EmptyReply,
+  Follow,
+  Query,
+  QueryReply,
+  Unfollow,
+} from "./bypros";
 import WebSocket from "isomorphic-ws";
 
-const byprosURL = "ws://bypros.epfl.ch/conode/ByzcoinProxy"
+const byprosURL = "ws://bypros.epfl.ch/conode/ByzcoinProxy";
 
 // To keep track of the latest block fetched
 let lastBlock: SkipBlock;
@@ -71,8 +79,12 @@ export function sayHi() {
   boatTarget = document.getElementById("boat");
   sqlInput = document.getElementById("sql-input") as HTMLTextAreaElement;
   catchupInput = document.getElementById("catchup-input") as HTMLInputElement;
-  catchupUpdateInput = document.getElementById("catchup-update-input") as HTMLInputElement;
-  adminPasswordInput = document.getElementById("admin-password-input") as HTMLInputElement;
+  catchupUpdateInput = document.getElementById(
+    "catchup-update-input"
+  ) as HTMLInputElement;
+  adminPasswordInput = document.getElementById(
+    "admin-password-input"
+  ) as HTMLInputElement;
 
   roster = Roster.fromTOML(rosterStr);
   if (!roster) {
@@ -135,8 +147,12 @@ export function sayHi() {
   document.getElementById("submit-sql").addEventListener("click", execSql);
 
   document.getElementById("admin-panel").addEventListener("click", adminToggle);
-  document.getElementById("sql-start-follow").addEventListener("click", sqlStartFollow);
-  document.getElementById("sql-stop-follow").addEventListener("click", sqlStopFollow);
+  document
+    .getElementById("sql-start-follow")
+    .addEventListener("click", sqlStartFollow);
+  document
+    .getElementById("sql-stop-follow")
+    .addEventListener("click", sqlStopFollow);
   document.getElementById("sql-catchup").addEventListener("click", sqlCatchup);
 }
 
@@ -335,9 +351,8 @@ function printDetailBlock(block: SkipBlock): string {
     output += `\n-- Transaction ${i}`;
     output += `\n--- Accepted: ${transaction.accepted}`;
     transaction.clientTransaction.instructions.forEach((instruction, j) => {
-
       const b = instruction.beautify();
-      
+
       output += `\n--- Instruction ${j}`;
       output += `\n---- Hash: ${instruction.hash().toString("hex")}`;
       output += `\n---- Instance ID: ${instruction.instanceID.toString("hex")}`;
@@ -355,7 +370,7 @@ function printDetailBlock(block: SkipBlock): string {
         output += `\n---- Delete: ${instruction.delete}`;
       }
       output += `\n----- Args:`;
-      b.args.forEach((arg:any, _:any) => {
+      b.args.forEach((arg: any, _: any) => {
         output += `\n------ Arg:`;
         output += `\n------- Name: ${arg.name}`;
         output += `\n------- Value: ${arg.value}`;
@@ -559,167 +574,171 @@ function printStatus(e: Event) {
 function execSql(e: Event) {
   console.log("sql executed", sqlInput.value);
 
-  const ws = new WebSocketConnection("ws://bypros.epfl.ch/conode", "ByzcoinProxy");
+  const ws = new WebSocketConnection(
+    "ws://bypros.epfl.ch/conode",
+    "ByzcoinProxy"
+  );
 
-  const query = new Query()
-  query.query = sqlInput.value
+  const query = new Query();
+  query.query = sqlInput.value;
 
-  ws.send(query, QueryReply).then(
-    (reply: QueryReply) => {
-      console.log("reply:", reply.result.toString())
-      prependLog(`SQL reply: ${reply.result.toString()}`)
-    }
-  ).catch(
-    (e: any) => {
-      console.log("error:", e)
-      prependLog(`failed to send SQL query: ${e}`)
-    }
-  )
+  ws.send(query, QueryReply)
+    .then((reply: QueryReply) => {
+      console.log("reply:", reply.result.toString());
+      prependLog(`SQL reply: ${reply.result.toString()}`);
+    })
+    .catch((e: any) => {
+      console.log("error:", e);
+      prependLog(`failed to send SQL query: ${e}`);
+    });
 }
 
 function sqlStartFollow(e: Event) {
-  var password = adminPasswordInput.value
+  var password = adminPasswordInput.value;
 
-  const ws = new WebSocket(`${byprosURL}/Follow/${password}`)
+  const ws = new WebSocket(`${byprosURL}/Follow/${password}`);
   ws.binaryType = "arraybuffer";
 
-  const msg = new Follow()
-  msg.scid = hex2Bytes("9cc36071ccb902a1de7e0d21a2c176d73894b1cf88ae4cc2ba4c95cd76f474f3")
-  msg.target = roster.list[0]
+  const msg = new Follow();
+  msg.scid = hex2Bytes(
+    "9cc36071ccb902a1de7e0d21a2c176d73894b1cf88ae4cc2ba4c95cd76f474f3"
+  );
+  msg.target = roster.list[0];
 
   ws.onmessage = (evt: { data: WebSocket.Data }): any => {
     if (evt.data instanceof Buffer || evt.data instanceof ArrayBuffer) {
-        const buf = Buffer.from(evt.data);
-        try {
-          EmptyReply.decode(buf)
-          prependLog(`got expected empty reply`)
-        } catch (e) {
-          prependLog(`error: ${e}`)
-        }
+      const buf = Buffer.from(evt.data);
+      try {
+        EmptyReply.decode(buf);
+        prependLog(`got expected empty reply`);
+      } catch (e) {
+        prependLog(`error: ${e}`);
+      }
     }
   };
 
   ws.onerror = (evt: { error: Error }) => {
-    console.log(evt)
-    prependLog(`error: ${evt.error}`)
-  }
+    console.log(evt);
+    prependLog(`error: ${evt.error}`);
+  };
 
-  ws.onclose = (evt: { code: number, reason: string }) => {
+  ws.onclose = (evt: { code: number; reason: string }) => {
     if (evt.code === 1006) {
-      prependLog(`wrong password`)
-      return
+      prependLog(`wrong password`);
+      return;
     }
 
-    prependLog(`closed: ${evt.code} ${evt.reason}`)
-  }
+    prependLog(`closed: ${evt.code} ${evt.reason}`);
+  };
 
-  const bytes = Buffer.from(Follow.$type.encode(msg).finish())
+  const bytes = Buffer.from(Follow.$type.encode(msg).finish());
   ws.onopen = () => {
-    ws.send(bytes)
+    ws.send(bytes);
   };
 }
 
 function sqlStopFollow(e: Event) {
-  var password = adminPasswordInput.value
+  var password = adminPasswordInput.value;
 
-  const ws = new WebSocket(`${byprosURL}/Unfollow/${password}`)
+  const ws = new WebSocket(`${byprosURL}/Unfollow/${password}`);
   ws.binaryType = "arraybuffer";
 
-  const msg = new Unfollow()
+  const msg = new Unfollow();
 
   ws.onmessage = (evt: { data: WebSocket.Data }): any => {
     if (evt.data instanceof Buffer || evt.data instanceof ArrayBuffer) {
-        const buf = Buffer.from(evt.data);
-        try {
-          EmptyReply.decode(buf)
-          prependLog(`got expected empty reply`)
-        } catch (e) {
-          prependLog(`error: ${e}`)
-        }
+      const buf = Buffer.from(evt.data);
+      try {
+        EmptyReply.decode(buf);
+        prependLog(`got expected empty reply`);
+      } catch (e) {
+        prependLog(`error: ${e}`);
+      }
     }
   };
 
   ws.onerror = (evt: { error: Error }) => {
-    console.log(evt)
-    prependLog(`error: ${evt.error}`)
-  }
+    console.log(evt);
+    prependLog(`error: ${evt.error}`);
+  };
 
-  ws.onclose = (evt: { code: number, reason: string }) => {
+  ws.onclose = (evt: { code: number; reason: string }) => {
     if (evt.code === 1006) {
-      prependLog(`wrong password`)
-      return
+      prependLog(`wrong password`);
+      return;
     }
 
-    prependLog(`closed: ${evt.code} ${evt.reason}`)
-  }
+    prependLog(`closed: ${evt.code} ${evt.reason}`);
+  };
 
-  const bytes = Buffer.from(Unfollow.$type.encode(msg).finish())
+  const bytes = Buffer.from(Unfollow.$type.encode(msg).finish());
   ws.onopen = () => {
-    ws.send(bytes)
+    ws.send(bytes);
   };
 }
 
 function sqlCatchup(e: Event) {
-  var password = adminPasswordInput.value
+  var password = adminPasswordInput.value;
 
-  const ws = new WebSocket(`${byprosURL}/CatchUpMsg/${password}`)
+  const ws = new WebSocket(`${byprosURL}/CatchUpMsg/${password}`);
   ws.binaryType = "arraybuffer";
 
-  const blockHex = catchupInput.value
-  const block = hex2Bytes(blockHex)
-
+  const blockHex = catchupInput.value;
+  const block = hex2Bytes(blockHex);
 
   const updateEvery = parseInt(catchupUpdateInput.value, 10);
 
-  console.log("catchup update input:", updateEvery)
+  console.log("catchup update input:", updateEvery);
 
-  const msg = new CatchUpMsg()
-  msg.fromblock = block
-  msg.scid = hex2Bytes("9cc36071ccb902a1de7e0d21a2c176d73894b1cf88ae4cc2ba4c95cd76f474f3")
-  msg.target = roster.list[0]
-  msg.updateevery = updateEvery
+  const msg = new CatchUpMsg();
+  msg.fromblock = block;
+  msg.scid = hex2Bytes(
+    "9cc36071ccb902a1de7e0d21a2c176d73894b1cf88ae4cc2ba4c95cd76f474f3"
+  );
+  msg.target = roster.list[0];
+  msg.updateevery = updateEvery;
 
   ws.onmessage = (evt: { data: WebSocket.Data }): any => {
     if (evt.data instanceof Buffer || evt.data instanceof ArrayBuffer) {
-        const buf = Buffer.from(evt.data);
-        try {
-          const resp = CatchUpResponse.decode(buf)
-          prependLog(`catch up response: ${resp.toString()}`)
-        } catch (e) {
-          prependLog(`error: ${e}`)
-        }
+      const buf = Buffer.from(evt.data);
+      try {
+        const resp = CatchUpResponse.decode(buf);
+        prependLog(`catch up response: ${resp.toString()}`);
+      } catch (e) {
+        prependLog(`error: ${e}`);
+      }
     }
   };
 
   ws.onerror = (evt: { error: Error }) => {
-    console.log(evt)
-    prependLog(`error: ${evt.error}`)
-  }
+    console.log(evt);
+    prependLog(`error: ${evt.error}`);
+  };
 
-  ws.onclose = (evt: { code: number, reason: string }) => {
+  ws.onclose = (evt: { code: number; reason: string }) => {
     if (evt.code === 1006) {
-      prependLog(`wrong password`)
-      return
+      prependLog(`wrong password`);
+      return;
     }
 
-    prependLog(`closed: ${evt.code} ${evt.reason}`)
-  }
+    prependLog(`closed: ${evt.code} ${evt.reason}`);
+  };
 
-  const bytes = Buffer.from(CatchUpMsg.$type.encode(msg).finish())
+  const bytes = Buffer.from(CatchUpMsg.$type.encode(msg).finish());
   ws.onopen = () => {
-    ws.send(bytes)
+    ws.send(bytes);
   };
 }
 
 function adminToggle(e: Event) {
   if (adminOpen) {
-    adminOpen = false
-    this.innerHTML = "Open admin panel"
-    document.getElementById("status").classList.remove("admin-open")
+    adminOpen = false;
+    this.innerHTML = "Open admin panel";
+    document.getElementById("status").classList.remove("admin-open");
   } else {
-    adminOpen = true
-    this.innerHTML = "Close admin panel"
-    document.getElementById("status").classList.add("admin-open")
+    adminOpen = true;
+    this.innerHTML = "Close admin panel";
+    document.getElementById("status").classList.add("admin-open");
   }
 }
 
