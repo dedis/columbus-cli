@@ -624,7 +624,7 @@ function sqlStartFollow(e: Event) {
 
   ws.onclose = (evt: { code: number; reason: string }) => {
     if (evt.code === 1006) {
-      prependLog(`wrong password`);
+      prependLog(`abnormal close (probably a wrong password)`);
       return;
     }
 
@@ -664,7 +664,7 @@ function sqlStopFollow(e: Event) {
 
   ws.onclose = (evt: { code: number; reason: string }) => {
     if (evt.code === 1006) {
-      prependLog(`wrong password`);
+      prependLog(`abnormal close (probably a wrong password)`);
       return;
     }
 
@@ -717,7 +717,7 @@ function sqlCatchup(e: Event) {
 
   ws.onclose = (evt: { code: number; reason: string }) => {
     if (evt.code === 1006) {
-      prependLog(`wrong password`);
+      prependLog(`abnormal close (probably a wrong password)`);
       return;
     }
 
