@@ -13,11 +13,23 @@ import {
   WebSocketAdapter,
   WebSocketConnection,
 } from "@dedis/cothority/network";
-import { Roster } from "@dedis/cothority/network/proto";
+import { Roster, ServerIdentity } from "@dedis/cothority/network/proto";
 import { SkipBlock } from "@dedis/cothority/skipchain";
 import { StatusRPC } from "@dedis/cothority/status";
 import { Observable, Subject } from "rxjs";
 import { takeUntil } from "rxjs/operators";
+import {
+  CatchUpMsg,
+  CatchUpResponse,
+  EmptyReply,
+  Follow,
+  Query,
+  QueryReply,
+  Unfollow,
+} from "./bypros";
+import WebSocket from "isomorphic-ws";
+
+const byprosURL = "ws://bypros.epfl.ch/conode/ByzcoinProxy";
 
 // To keep track of the latest block fetched
 let lastBlock: SkipBlock;
@@ -31,6 +43,10 @@ let rosterInput: HTMLInputElement;
 let repeatCmdInput: HTMLInputElement;
 let statsTarget: HTMLElement;
 let boatTarget: HTMLElement;
+let sqlInput: HTMLTextAreaElement;
+let catchupInput: HTMLInputElement;
+let catchupUpdateInput: HTMLInputElement;
+let adminPasswordInput: HTMLInputElement;
 // To re-use the same ws connection across runs
 let ws: WebSocketAdapter;
 // The roster
@@ -42,6 +58,8 @@ const subject = new Subject<[number, SkipBlock]>();
 let printDetails: boolean;
 let printRoster: boolean;
 let logEach: number;
+
+let adminOpen = false;
 
 export function sayHi() {
   numBlocksInput = document.getElementById(
@@ -59,6 +77,14 @@ export function sayHi() {
     "repeat-cmd-input"
   ) as HTMLInputElement;
   boatTarget = document.getElementById("boat");
+  sqlInput = document.getElementById("sql-input") as HTMLTextAreaElement;
+  catchupInput = document.getElementById("catchup-input") as HTMLInputElement;
+  catchupUpdateInput = document.getElementById(
+    "catchup-update-input"
+  ) as HTMLInputElement;
+  adminPasswordInput = document.getElementById(
+    "admin-password-input"
+  ) as HTMLInputElement;
 
   roster = Roster.fromTOML(rosterStr);
   if (!roster) {
@@ -117,6 +143,17 @@ export function sayHi() {
 
   document.getElementById("get-latest").addEventListener("click", printLatest);
   document.getElementById("get-status").addEventListener("click", printStatus);
+
+  document.getElementById("submit-sql").addEventListener("click", execSql);
+
+  document.getElementById("admin-panel").addEventListener("click", adminToggle);
+  document
+    .getElementById("sql-start-follow")
+    .addEventListener("click", sqlStartFollow);
+  document
+    .getElementById("sql-stop-follow")
+    .addEventListener("click", sqlStopFollow);
+  document.getElementById("sql-catchup").addEventListener("click", sqlCatchup);
 }
 
 // Called by the "next" and "previous" buttons. It fetches the options in case
@@ -308,14 +345,14 @@ function printDetailBlock(block: SkipBlock): string {
   const d = new Date(header.timestamp.div(1000000).toNumber());
 
   output += `\n-- Timestamps: ${d.toUTCString()}`;
+  output += `\n-- Index: ${block.index}`;
 
   body.txResults.forEach((transaction, i) => {
     output += `\n-- Transaction ${i}`;
     output += `\n--- Accepted: ${transaction.accepted}`;
     transaction.clientTransaction.instructions.forEach((instruction, j) => {
-
       const b = instruction.beautify();
-      
+
       output += `\n--- Instruction ${j}`;
       output += `\n---- Hash: ${instruction.hash().toString("hex")}`;
       output += `\n---- Instance ID: ${instruction.instanceID.toString("hex")}`;
@@ -333,7 +370,7 @@ function printDetailBlock(block: SkipBlock): string {
         output += `\n---- Delete: ${instruction.delete}`;
       }
       output += `\n----- Args:`;
-      b.args.forEach((arg, _) => {
+      b.args.forEach((arg: any, _: any) => {
         output += `\n------ Arg:`;
         output += `\n------- Name: ${arg.name}`;
         output += `\n------- Value: ${arg.value}`;
@@ -534,6 +571,177 @@ function printStatus(e: Event) {
   });
 }
 
+function execSql(e: Event) {
+  console.log("sql executed", sqlInput.value);
+
+  const ws = new WebSocketConnection(
+    "ws://bypros.epfl.ch/conode",
+    "ByzcoinProxy"
+  );
+
+  const query = new Query();
+  query.query = sqlInput.value;
+
+  ws.send(query, QueryReply)
+    .then((reply: QueryReply) => {
+      console.log("reply:", reply.result.toString());
+      prependLog(`SQL reply: ${reply.result.toString()}`);
+    })
+    .catch((e: any) => {
+      console.log("error:", e);
+      prependLog(`failed to send SQL query: ${e}`);
+    });
+}
+
+function sqlStartFollow(e: Event) {
+  var password = adminPasswordInput.value;
+
+  const ws = new WebSocket(`${byprosURL}/Follow/${password}`);
+  ws.binaryType = "arraybuffer";
+
+  const msg = new Follow();
+  msg.scid = hex2Bytes(
+    "9cc36071ccb902a1de7e0d21a2c176d73894b1cf88ae4cc2ba4c95cd76f474f3"
+  );
+  msg.target = roster.list[0];
+
+  ws.onmessage = (evt: { data: WebSocket.Data }): any => {
+    if (evt.data instanceof Buffer || evt.data instanceof ArrayBuffer) {
+      const buf = Buffer.from(evt.data);
+      try {
+        EmptyReply.decode(buf);
+        prependLog(`got expected empty reply`);
+      } catch (e) {
+        prependLog(`error: ${e}`);
+      }
+    }
+  };
+
+  ws.onerror = (evt: { error: Error }) => {
+    console.log(evt);
+    prependLog(`error: ${evt.error}`);
+  };
+
+  ws.onclose = (evt: { code: number; reason: string }) => {
+    if (evt.code === 1006) {
+      prependLog(`abnormal close (probably a wrong password)`);
+      return;
+    }
+
+    prependLog(`closed: ${evt.code} ${evt.reason}`);
+  };
+
+  const bytes = Buffer.from(Follow.$type.encode(msg).finish());
+  ws.onopen = () => {
+    ws.send(bytes);
+  };
+}
+
+function sqlStopFollow(e: Event) {
+  var password = adminPasswordInput.value;
+
+  const ws = new WebSocket(`${byprosURL}/Unfollow/${password}`);
+  ws.binaryType = "arraybuffer";
+
+  const msg = new Unfollow();
+
+  ws.onmessage = (evt: { data: WebSocket.Data }): any => {
+    if (evt.data instanceof Buffer || evt.data instanceof ArrayBuffer) {
+      const buf = Buffer.from(evt.data);
+      try {
+        EmptyReply.decode(buf);
+        prependLog(`got expected empty reply`);
+      } catch (e) {
+        prependLog(`error: ${e}`);
+      }
+    }
+  };
+
+  ws.onerror = (evt: { error: Error }) => {
+    console.log(evt);
+    prependLog(`error: ${evt.error}`);
+  };
+
+  ws.onclose = (evt: { code: number; reason: string }) => {
+    if (evt.code === 1006) {
+      prependLog(`abnormal close (probably a wrong password)`);
+      return;
+    }
+
+    prependLog(`closed: ${evt.code} ${evt.reason}`);
+  };
+
+  const bytes = Buffer.from(Unfollow.$type.encode(msg).finish());
+  ws.onopen = () => {
+    ws.send(bytes);
+  };
+}
+
+function sqlCatchup(e: Event) {
+  var password = adminPasswordInput.value;
+
+  const ws = new WebSocket(`${byprosURL}/CatchUpMsg/${password}`);
+  ws.binaryType = "arraybuffer";
+
+  const blockHex = catchupInput.value;
+  const block = hex2Bytes(blockHex);
+
+  const updateEvery = parseInt(catchupUpdateInput.value, 10);
+
+  console.log("catchup update input:", updateEvery);
+
+  const msg = new CatchUpMsg();
+  msg.fromblock = block;
+  msg.scid = hex2Bytes(
+    "9cc36071ccb902a1de7e0d21a2c176d73894b1cf88ae4cc2ba4c95cd76f474f3"
+  );
+  msg.target = roster.list[0];
+  msg.updateevery = updateEvery;
+
+  ws.onmessage = (evt: { data: WebSocket.Data }): any => {
+    if (evt.data instanceof Buffer || evt.data instanceof ArrayBuffer) {
+      const buf = Buffer.from(evt.data);
+      try {
+        const resp = CatchUpResponse.decode(buf);
+        prependLog(`catch up response: ${resp.toString()}`);
+      } catch (e) {
+        prependLog(`error: ${e}`);
+      }
+    }
+  };
+
+  ws.onerror = (evt: { error: Error }) => {
+    console.log(evt);
+    prependLog(`error: ${evt.error}`);
+  };
+
+  ws.onclose = (evt: { code: number; reason: string }) => {
+    if (evt.code === 1006) {
+      prependLog(`abnormal close (probably a wrong password)`);
+      return;
+    }
+
+    prependLog(`closed: ${evt.code} ${evt.reason}`);
+  };
+
+  const bytes = Buffer.from(CatchUpMsg.$type.encode(msg).finish());
+  ws.onopen = () => {
+    ws.send(bytes);
+  };
+}
+
+function adminToggle(e: Event) {
+  if (adminOpen) {
+    adminOpen = false;
+    this.innerHTML = "Open admin panel";
+    document.getElementById("status").classList.remove("admin-open");
+  } else {
+    adminOpen = true;
+    this.innerHTML = "Close admin panel";
+    document.getElementById("status").classList.add("admin-open");
+  }
+}
+
 //
 // Print log stuff
 //
@@ -590,15 +798,15 @@ function printStat(startTime: number, count: number) {
 }
 
 const rosterStr = `[[servers]]
-  Address = "tls://188.166.35.173:7770"
-  Url = "https://wookiee.ch/conode"
-  Suite = "Ed25519"
-  Public = "a59fc58c0a445b70dcd57e01603a714a2ee99c1cc14ca71780383abada5d7143"
-  Description = "Wookiee's Cothority"
-  [servers.Services]
-    [servers.Services.ByzCoin]
-      Public = "70c192537778a53abb9315979f48e170da9182b324c7974462cbdde90fc0c51d440e2de266a81fe7a3d9d2b6665ef07ba3bbe8df027af9b8a3b4ea6569d7f72a41f0dfe4dc222aa8fd4c99ced2212d7d1711267f66293732c88e8d43a2cf6b3e2e1cd0c57b8f222a73a393e70cf81e53a0ce8ed2a426e3b0fa6b0da30ff27b1a"
-      Suite = "bn256.adapter"
-    [servers.Services.Skipchain]
-      Public = "63e2ed93333bd0888ed2b5e51b5e2544831b4d79dead571cf67604cdd96bc0212f68e582468267697403d7ed418e70ed9fcb01940e4c603373994ef00c04542c24091939bddca515381e0285ab805826cec457346be482e687475a973a20fca48f16c76e352076ccc0c866d7abb3ac50d02f9874d065f85404a0127efc1acf49"
-      Suite = "bn256.adapter"`;
+Address = "tls://conode.dedis.ch:7000"
+Suite = "Ed25519"
+Public = "ec5c65a3c922d1df32075640e3de606197be24af76059a2ef145501122884bd3"
+Description = "EPFL Cothority-server"
+URL = "https://conode.dedis.ch"
+[servers.Services]
+  [servers.Services.ByzCoin]
+    Public = "6f69dc10dbef8f4d80072aa9d1bee191b0f68b137a9d06d006c39fe6667738fa2d3439caf428a1dcb6f4a5bd2ce6ff6f1462ebb1b7374080d95310bc6e1115e105d7ae38f9fed1585094b0cb13dc3a0f3e74daeaa794ca10058e44ef339055510f4d12a7234779f8db2e093dd8a14a03440a7d5a8ef04cac8fd735f20440b589"
+    Suite = "bn256.adapter"
+  [servers.Services.Skipchain]
+    Public = "32ba0cccec06ac4259b39102dcba13677eb385e0fdce99c93406542c5cbed3ec6ac71a81b01207451346402542923449ecf71fc0d69b1d019df34407b532fb2a09005c801e359afb377cc3255e918a096912bf6f7b7e4040532404996e05f78c408760b57fcf9e04c50eb7bc413438aca9d653dd0b6a8353d128370ebd4bdb10"
+    Suite = "bn256.adapter"`;

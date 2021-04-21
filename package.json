@@ -7,16 +7,20 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "bundle": "webpack",
     "watch": "webpack --watch",
+    "protobuf": "node scripts/build_proto.js",
     "makePretty": "prettier --write \"src/**/*{.ts,.js}\"",
     "isPretty": "prettier --check \"src/**/*{.ts,.js}\"",
-    "lint": "tslint 'src/{,**/}*.ts' 'spec/{,**/}*.ts'",
     "makeRelease": "npm run bundle && mkdir columbus-cli && cp index.html columbus-cli && cp -r dist columbus-cli && tar czf columbus-cli.tar.gz columbus-cli"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@dedis/cothority": "^3.6.2",
-    "rxjs": "^6.6.2"
+    "@dedis/cothority": "^3.6.4",
+    "isomorphic-ws": "^4.0.1",
+    "protobufjs": "^6.10.2",
+    "rxjs": "^6.6.2",
+    "websocket-ts": "^1.1.0",
+    "ws": "^7.4.4"
   },
   "devDependencies": {
     "@babel/core": "^7.11.1",
@@ -24,17 +28,19 @@
     "@types/dockerode": "^2.5.34",
     "@types/jasmine": "^3.5.12",
     "@types/long": "^4.0.1",
+    "@types/ws": "^7.4.1",
     "babel-loader": "^8.1.0",
     "dockerode": "^3.2.1",
+    "eslint": "^7.24.0",
     "jasmine": "^3.6.1",
     "jasmine-console-reporter": "^3.1.0",
+    "node-polyfill-webpack-plugin": "^1.1.0",
     "nyc": "^15.1.0",
     "prettier": "2.0.5",
     "ts-loader": "^6.2.2",
     "ts-node": "^8.10.2",
-    "tslint": "^5.20.1",
     "typescript": "^3.9.7",
-    "webpack": "^4.44.1",
-    "webpack-cli": "^3.3.12"
+    "webpack": "^5.21.2",
+    "webpack-cli": "^4.5.0"
   }
 }

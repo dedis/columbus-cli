@@ -7,53 +7,70 @@
   <body>
 
     <div class="top-wrapper">
-      <div class="form">
-         <div class="row">
-             <label>First block to fetch</label>
-             <input title="The first block to fetch when a new 'Load' is done." type="text" id="block-input" value="9cc36071ccb902a1de7e0d21a2c176d73894b1cf88ae4cc2ba4c95cd76f474f3"/>
-         </div>
-         <div class="navigation">
-             <div class="row">
-                 <button title="Makes a new paginate request, starting from the block specified in 'First block to fetch'." id="load-button">Load</button>
-             </div>
-             <div class="row">
-                 <button title="Makes a new paginate request to load the previous blocks of the chain." data-reversed="true" id="backward-button">◀︎</button>
-                 <div class="numb">
-                     <label>Blocks/page</label>
-                     <input title="'Blocks/page' defines the number of blocks each page will contain. A page is an asynchronous call sent back from the node." type="number" id="num-blocks-input" value="5">
-                 </div>
-                 <button title="Makes a new paginate request to load the next blocks of the chain." id="forward-button">▶︎</button>
+      <div class="simple-browsing">
+        <div class="form">
+          <div class="row">
+              <label>First block to fetch</label>
+              <input title="The first block to fetch when a new 'Load' is done." type="text" id="block-input" value="9cc36071ccb902a1de7e0d21a2c176d73894b1cf88ae4cc2ba4c95cd76f474f3"/>
+          </div>
+          <div class="navigation">
+              <div class="row">
+                  <button title="Makes a new paginate request, starting from the block specified in 'First block to fetch'." id="load-button">Load</button>
               </div>
               <div class="row">
-                 <div class="numb">
-                   <label>num pages</label>
-                   <input title="'num pages' defines the number of asynchronous call the server will sent back, with each call containing 'Blocks/page' blocks." type="number" id="num-pages-input" value="1">
-                 </div>
-              </div>
-         </div>
-       </div>
+                  <button title="Makes a new paginate request to load the previous blocks of the chain." data-reversed="true" id="backward-button">◀︎</button>
+                  <div class="numb">
+                      <label>Blocks/page</label>
+                      <input title="'Blocks/page' defines the number of blocks each page will contain. A page is an asynchronous call sent back from the node." type="number" id="num-blocks-input" value="5">
+                  </div>
+                  <button title="Makes a new paginate request to load the next blocks of the chain." id="forward-button">▶︎</button>
+                </div>
+                <div class="row">
+                  <div class="numb">
+                    <label>num pages</label>
+                    <input title="'num pages' defines the number of asynchronous call the server will sent back, with each call containing 'Blocks/page' blocks." type="number" id="num-pages-input" value="1">
+                  </div>
+                </div>
+          </div>
+        </div>
 
-      <div class="options">
-        <div class="numb">
-          <label>log each</label>
-          <input title="'log each' defines the interval at which blocks are printed. A value of 2 means that we print one block out of two. A value of 1 means all the blocks are printed." type="number" id="log-each-input" value="1">
+        <div class="options">
+          <div class="numb">
+            <label>log each</label>
+            <input title="'log each' defines the interval at which blocks are printed. A value of 2 means that we print one block out of two. A value of 1 means all the blocks are printed." type="number" id="log-each-input" value="1">
+          </div>
+          <a style="display: none" id="download-link">Download results</a>
+          <div class="numb">
+            <label>print details</label>
+            <input title="Prints the details of each block. Is also used to display more details for the status." id="details-input" type="checkbox">
+          </div>
+          <div class="numb">
+            <label>print roster</label>
+            <input title="If checked, the roster is printed on each block, as well as when the status is fetched." id="roster-input" type="checkbox">
+          </div>
+          <div class="numb">
+            <label>repeat cmd</label>
+            <input title="The number of times the 'Load', '◀︎', or '▶︎' is repeated. This features is mostly interesting from the code side." type="number" id="repeat-cmd-input" value="0">
+          </div>
+          <button title="Fetch the latest block starting from the latest loaded block, or the one specified in the 'First block to fetch' input if none have been loaded yet. If follows the highest forward link on each block, until reaching a block with no forward link." id="get-latest">Get latest</button>
+          <button title="Fetch the roster from the latest block and display the status of each node. Takes into account the 'print details' and 'print roster' options. If no blocks have been loaded, it gets the latest block starting from the one in the 'First block to fetch' input. Otherwise, it takes the latest block loaded." id="get-status">Get status</button>
         </div>
-        <a style="display: none" id="download-link">Download results</a>
-        <div class="numb">
-          <label>print details</label>
-          <input title="Prints the details of each block. Is also used to display more details for the status." id="details-input" type="checkbox">
-        </div>
-        <div class="numb">
-          <label>print roster</label>
-          <input title="If checked, the roster is printed on each block, as well as when the status is fetched." id="roster-input" type="checkbox">
-        </div>
-        <div class="numb">
-          <label>repeat cmd</label>
-          <input title="The number of times the 'Load', '◀︎', or '▶︎' is repeated. This features is mostly interesting from the code side." type="number" id="repeat-cmd-input" value="0">
-        </div>
-        <button title="Fetch the latest block starting from the latest loaded block, or the one specified in the 'First block to fetch' input if none have been loaded yet. If follows the highest forward link on each block, until reaching a block with no forward link." id="get-latest">Get latest</button>
-        <button title="Fetch the roster from the latest block and display the status of each node. Takes into account the 'print details' and 'print roster' options. If no blocks have been loaded, it gets the latest block starting from the one in the 'First block to fetch' input. Otherwise, it takes the latest block loaded." id="get-status">Get status</button>
       </div>
+
+      <div class="sep"></div>
+
+      <div class="bypros">
+        <textarea title="Here you can submit an SQL query" type="text" id="sql-input" cols="33" rows="9">select
+  encode(hash, 'hex')
+    as hash,
+  block_id
+  from cothority.block 
+  limit 2;</textarea>
+        <button title="Submit the request. The result will be shown bellow" id="submit-sql">Submit</button>
+        <button title="Open the admin panel, which offers admin functionalities" id="admin-panel">Open admin panel</button>
+      </div>
+
+      <div class="sep"></div>
 
         <div class="text-wrapper">
             <h1>
@@ -75,6 +92,31 @@
             <p id="stats-info"></p>
         </div>
 
+    </div>
+
+    <div class="sql-admin">
+      <p>Bypros administration pannel</p>
+      <button id="sql-start-follow">Start following</button>
+      <button id="sql-stop-follow">Stop following</button>
+      <div class="form" style="flex-direction: row; padding: 15px 0;">
+        <div class="row">
+          <label>Block ID</label>
+          <input title="Enter there the block from which to catchup" type="text" value="9cc36071ccb902a1de7e0d21a2c176d73894b1cf88ae4cc2ba4c95cd76f474f3" id="catchup-input"/>
+        </div>
+        <div class="row">
+          <div class="numb">
+            <label>Block interval update</label>
+            <input title="Interval at which we receive update messages" type="number" value="10" id="catchup-update-input"/>
+          </div>
+        </div>
+        <button title="status the catchup action" id="sql-catchup">Catchup</button>
+      </div>
+      <div class="form" style="flex-direction: row; padding: 15px 0;">
+        <div class="row">
+          <label>Password</label>
+          <input title="The admin password" type="text" id="admin-password-input"/>
+        </div>
+      </div>
     </div>
 
     <div id="status" class="custom-scroll"></div>
@@ -100,12 +142,18 @@
         #status {
             overflow-y: scroll;
             position: absolute;
+            z-index: 100;
             top: 250px;
             right: 0;
             bottom: 0px;
             left: 0;
             padding: 20px 0 30px 0;
             background: #1e1e1e;
+            transition: all 300ms linear;
+        }
+        #status.admin-open {
+            top: 500px;
+            box-shadow: 0px 0px 20px #0000008f;
         }
         #status .log-entry-wrapper {
             display: flex;
@@ -145,6 +193,7 @@
             flex-direction: row;
             justify-content: center;
             align-items: center;
+            z-index: 200;
         }
 
         .checkbox-round {
@@ -168,8 +217,45 @@
         div.top-wrapper {
             display: flex;
             flex-direction: row;
+            align-items: center;
+        }
+
+        div.simple-browsing {
+            display: flex;
+            flex-direction: row;
             height: 250px;
             align-items: center;
+        }
+
+        div.sep {
+          border-left: 1px solid #1e1e1e;
+          padding: 0 30px 0 0;
+          margin: 0 0 0 30px;
+          height: 100px;
+        }
+
+        div.bypros {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+        }
+
+        div.bypros textarea {
+          padding: 10px;
+        }
+
+        div.bypros button {
+          margin: 5px 0;
+          padding: 2px 7px;
+          background: none;
+          cursor: pointer;
+        }
+
+        div.bypros button#admin-panel {
+          font-size: 8px;
+          color: #aaa;
+          border: none;
         }
 
         div.form {
@@ -240,7 +326,7 @@
         }
         div.text-wrapper {
             align-self: flex-start;
-            padding: 30px;
+            padding: 30px 0;
         }
         div.text-wrapper h1 {
             padding: 0;
@@ -254,6 +340,10 @@
             padding: 0 0 0 10px;
             fill: #00b5e3;
         }
+        div.sql-admin {
+          padding: 20px;
+        }
+
         .custom-scroll::-webkit-scrollbar {
             width: 8px;
             height: 8px;
