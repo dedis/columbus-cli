@@ -575,7 +575,7 @@ function execSql(e: Event) {
   console.log("sql executed", sqlInput.value);
 
   const ws = new WebSocketConnection(
-    "ws://bypros.epfl.ch/conode",
+    "wss://bypros.epfl.ch/conode",
     "ByzcoinProxy"
   );
 
