@@ -29,7 +29,7 @@ import {
 } from "./bypros";
 import WebSocket from "isomorphic-ws";
 
-const byprosURL = "ws://bypros.epfl.ch/conode/ByzcoinProxy";
+const byprosURL = "wss://bypros.epfl.ch/conode/ByzcoinProxy";
 
 // To keep track of the latest block fetched
 let lastBlock: SkipBlock;
