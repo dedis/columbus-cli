@@ -95,27 +95,37 @@
     </div>
 
     <div class="sql-admin">
-      <p>Bypros administration pannel</p>
-      <button id="sql-start-follow">Start following</button>
-      <button id="sql-stop-follow">Stop following</button>
-      <div class="form" style="flex-direction: row; padding: 15px 0;">
-        <div class="row">
-          <label>Block ID</label>
-          <input title="Enter there the block from which to catchup" type="text" value="9cc36071ccb902a1de7e0d21a2c176d73894b1cf88ae4cc2ba4c95cd76f474f3" id="catchup-input"/>
+      <div class="left">
+        <p>Bypros administration pannel</p>
+        <button id="sql-start-follow">Start following</button>
+        <button id="sql-stop-follow">Stop following</button>
+        <div class="form" style="flex-direction: row; padding: 15px 0; width: initial;">
+          <div class="row">
+            <label>Block ID</label>
+            <input title="Enter there the block from which to catchup" type="text" value="9cc36071ccb902a1de7e0d21a2c176d73894b1cf88ae4cc2ba4c95cd76f474f3" id="catchup-input"/>
+          </div>
+          <div class="row" style="padding-bottom: 7px">
+            <div class="numb">
+              <label>Block interval update</label>
+              <input title="Interval at which we receive update messages" type="number" value="10" id="catchup-update-input"/>
+            </div>
+          </div>
+          <button title="status the catchup action" id="sql-catchup">Catchup</button>
         </div>
-        <div class="row">
-          <div class="numb">
-            <label>Block interval update</label>
-            <input title="Interval at which we receive update messages" type="number" value="10" id="catchup-update-input"/>
+        <div class="form" style="flex-direction: row; padding: 15px 0;">
+          <div class="row">
+            <label>Password</label>
+            <input title="The admin password" type="text" id="admin-password-input"/>
           </div>
         </div>
-        <button title="status the catchup action" id="sql-catchup">Catchup</button>
       </div>
-      <div class="form" style="flex-direction: row; padding: 15px 0;">
-        <div class="row">
-          <label>Password</label>
-          <input title="The admin password" type="text" id="admin-password-input"/>
-        </div>
+
+      <div class="sep"></div>
+
+      <div class="right">
+        <p>Roster</p>
+        <textarea rows=7 cols=30 id="roster-textarea"></textarea>
+        <button id="roster-load" title="use another roster">Load</button>
       </div>
     </div>
 
@@ -340,8 +350,20 @@
             padding: 0 0 0 10px;
             fill: #00b5e3;
         }
+
+        /* Admin panel */
+
         div.sql-admin {
           padding: 20px;
+          display: flex;
+          flex-direction: row;
+          align-items: center;
+        }
+
+        div.sql-admin .right {
+          display: flex;
+          flex-direction: column;
+          padding: 0 20px;
         }
 
         .custom-scroll::-webkit-scrollbar {

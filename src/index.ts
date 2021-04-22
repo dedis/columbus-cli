@@ -47,6 +47,7 @@ let sqlInput: HTMLTextAreaElement;
 let catchupInput: HTMLInputElement;
 let catchupUpdateInput: HTMLInputElement;
 let adminPasswordInput: HTMLInputElement;
+let rosterTextArea: HTMLTextAreaElement;
 // To re-use the same ws connection across runs
 let ws: WebSocketAdapter;
 // The roster
@@ -85,6 +86,9 @@ export function sayHi() {
   adminPasswordInput = document.getElementById(
     "admin-password-input"
   ) as HTMLInputElement;
+  rosterTextArea = document.getElementById(
+    "roster-textarea"
+  ) as HTMLTextAreaElement;
 
   roster = Roster.fromTOML(rosterStr);
   if (!roster) {
@@ -154,6 +158,8 @@ export function sayHi() {
     .getElementById("sql-stop-follow")
     .addEventListener("click", sqlStopFollow);
   document.getElementById("sql-catchup").addEventListener("click", sqlCatchup);
+
+  document.getElementById("roster-load").addEventListener("click", rosterLoad);
 }
 
 // Called by the "next" and "previous" buttons. It fetches the options in case
@@ -739,6 +745,20 @@ function adminToggle(e: Event) {
     adminOpen = true;
     this.innerHTML = "Close admin panel";
     document.getElementById("status").classList.add("admin-open");
+  }
+}
+
+function rosterLoad(e: Event) {
+  try {
+    const rosterStr = rosterTextArea.value;
+    roster = Roster.fromTOML(rosterStr);
+    if (!roster) {
+      prependLog("roster is undefined");
+      return;
+    }
+    prependLog("roster set");
+  } catch (e) {
+    prependLog("failed to load roster: ", e);
   }
 }
 
